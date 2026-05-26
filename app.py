@@ -1,5 +1,10 @@
 import streamlit as st
 import pandas as pd
+import google.generativeai as genai
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    st.warning("GEMINI_API_KEY not found in secrets. LLM-powered insights will be unavailable.")
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
@@ -1071,6 +1076,65 @@ with tab3:
                       <div class="insight-value">{ins['value']}</div>
                     </div>
                     """, unsafe_allow_html=True)
+
+                    # ── PASTE THIS PART ONLY (MODEL + CHAT BOX INITIALIZATION) ────────────────
+    st.markdown('<div style="height: 2rem;"></div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="section-header">
+      <div class="dot"></div><h2>Public Health AI Co-Pilot</h2><div class="line"></div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # SYSTEM INSTRUCTIONS: AI ko train karne ke liye
+    system_instruction = """
+    You are an expert Public Health AI Assistant built into a US Mortality Dashboard.
+    Your job is to answer questions related to healthcare, disease causes (like Heart disease, Cancer, Stroke, etc.), 
+    mortality rates, prevention, and CDC public health data. 
+    Keep your tone professional, empathetic, scientific, and concise. 
+    If the user asks something completely unrelated to healthcare or public health, politely guide them back to the topic.
+    """
+    
+    # 1. MODEL SETUP (Yeh line zaroor honi chahiye, is se model define hota hai)
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_instruction
+    )
+    
+    # 2. CHAT HISTORY INITIALIZATION
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+        
+    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    st.markdown('<div class="chart-title">💬 Mortality Intelligence Chat</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-subtitle">Ask anything about leading causes of death, trends, prevention, or statistics.</div>', unsafe_allow_html=True)
+    
+    # Purani chat history render karne ke liye
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            
+    # 3. USER INPUT & RESPONSE LOGIC
+    if user_query := st.chat_input("Ask AI (e.g., Why is Heart Disease the top killer in the US?)"):
+        with st.chat_message("user"):
+            st.markdown(user_query)
+        st.session_state.chat_history.append({"role": "user", "content": user_query})
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing public health data..."):
+                try:
+                    # Model response generate karega
+                    response = model.generate_content(user_query)
+                    ai_response = response.text
+                    st.markdown(ai_response)
+                    st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
+                except Exception as e:
+                    st.error(f"AI Error: {str(e)}")
+                    st.info("Kindly make sure your Gemini API key is valid in Streamlit Secrets.")
+                    
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div style="height: 1.5rem;"></div>', unsafe_allow_html=True)
+    # ──────────────────────────────────────────────────────────────────────────
 
     # Data table at bottom
     st.markdown("""
