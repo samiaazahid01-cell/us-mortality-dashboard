@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="US Mortality AI Dashboard",
+    page_title="US Mortality Dashboard",
     page_icon="💀",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -420,7 +420,7 @@ df_state_ac = df_state[df_state["Cause"] == "All causes"]
 st.markdown(f"""
 <div class="dashboard-header">
   <div class="eyebrow">▸ Exploratory Data Analysis · Public Health Intelligence ·  Gemini AI Assisted</div>
-  <h1>US Mortality Dashboard</h1>
+  <h1>US Mortality  AI Dashboard</h1>
   <div class="subtitle">CDC · NCHS Leading Causes of Death · {year_range[0]} – {year_range[1]} · {selected_state}</div>
 </div>
 """, unsafe_allow_html=True)
@@ -1157,6 +1157,6 @@ with tab3:
 st.markdown("""
 <div class="dashboard-footer">
   US MORTALITY DASHBOARD &nbsp;·&nbsp; CDC NCHS Leading Causes of Death 1999–2017
-  &nbsp;·&nbsp; Built with Streamlit & Plotly &nbsp;·&nbsp; Exploratory Data Analysis Project; Gemini AI Assisted
+  &nbsp;·&nbsp; Built with Streamlit & Plotly &nbsp;·&nbsp; Exploratory Data Analysis Project &nbsp;·&nbsp; Gemini AI Assisted
 </div>
 """, unsafe_allow_html=True)
