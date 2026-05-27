@@ -1204,21 +1204,31 @@ with tab5:
         </div>
     """, unsafe_allow_html=True)
 
-    # Dynamic Column Resolver to prevent KeyError crashes
+    # 1. Safe Column Name Resolver
     cause_col = 'Cause Name' if 'Cause Name' in df.columns else 'Cause'
     rate_col = 'Age-adjusted Death Rate' if 'Age-adjusted Death Rate' in df.columns else 'Death_Rate'
 
-    all_states = sorted(df['State'].unique()) if 'df' in locals() else []
+    # 2. Safe Variable Resolver (NameError ko khatam karne ke liye)
+    # Agar 'selected_disease' nahi mila, toh ye doosre possible names check karega, nahi toh default pehla disease select karega
+    if 'selected_disease' in locals():
+        chosen_disease = selected_disease
+    elif 'disease_focus' in locals():
+        chosen_disease = disease_focus
+    else:
+        chosen_disease = df[cause_col].unique()[0]
+
+    # 3. State Selectors
+    all_states = sorted(df['State'].unique())
     
     col_a, col_b = st.columns(2)
     with col_a:
-        state_a = st.selectbox("🎯 Select Baseline State (A)", all_states, index=all_states.index("California") if "California" in all_states else 0)
+        state_a = st.selectbox("🎯 Select Baseline State (A)", all_states, index=all_states.index("California") if "California" in all_states else 0, key="showdown_state_a")
     with col_b:
-        state_b = st.selectbox("🚀 Select Comparison State (B)", all_states, index=all_states.index("Texas") if "Texas" in all_states else min(1, len(all_states)-1))
+        state_b = st.selectbox("🚀 Select Comparison State (B)", all_states, index=all_states.index("Texas") if "Texas" in all_states else min(1, len(all_states)-1), key="showdown_state_b")
 
-    # Filtering rows safely using the resolved columns
-    df_a = df[(df['State'] == state_a) & (df[cause_col] == active_disease)].sort_values('Year')
-    df_b = df[(df['State'] == state_b) & (df[cause_col] == active_disease)].sort_values('Year')
+    # 4. Safe Filtering using the resolved variables
+    df_a = df[(df['State'] == state_a) & (df[cause_col] == chosen_disease)].sort_values('Year')
+    df_b = df[(df['State'] == state_b) & (df[cause_col] == chosen_disease)].sort_values('Year')
 
     if not df_a.empty and not df_b.empty:
         import plotly.graph_objects as go
@@ -1240,6 +1250,7 @@ with tab5:
         st.plotly_chart(fig_comp, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # Metrics Calculation
         avg_a = df_a[rate_col].mean()
         avg_b = df_b[rate_col].mean()
         max_year_a = df_a.loc[df_a[rate_col].idxmax()]['Year']
@@ -1264,7 +1275,6 @@ with tab5:
             """, unsafe_allow_html=True)
     else:
         st.warning("Please choose differing states with valid parameters to load analytics.")
-
 with tab6:
     st.markdown("""
         <div style="margin-bottom: 1.5rem;">
