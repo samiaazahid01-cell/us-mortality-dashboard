@@ -1217,8 +1217,8 @@ with tab5:
         state_b = st.selectbox("🚀 Select Comparison State (B)", all_states, index=all_states.index("Texas") if "Texas" in all_states else min(1, len(all_states)-1))
 
     # Filtering rows safely using the resolved columns
-    df_a = df[(df['State'] == state_a) & (df[cause_col] == selected_disease)].sort_values('Year')
-    df_b = df[(df['State'] == state_b) & (df[cause_col] == selected_disease)].sort_values('Year')
+    df_a = df[(df['State'] == state_a) & (df[cause_col] == active_disease)].sort_values('Year')
+    df_b = df[(df['State'] == state_b) & (df[cause_col] == active_disease)].sort_values('Year')
 
     if not df_a.empty and not df_b.empty:
         import plotly.graph_objects as go
