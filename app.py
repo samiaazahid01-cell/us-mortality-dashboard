@@ -468,11 +468,13 @@ st.markdown(f"""
 # ══════════════════════════════════════════════════════════════════════════════
 # TABS
 # ══════════════════════════════════════════════════════════════════════════════
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "  📊  Overview & Trends  ",
     "  🗺  Maps & Analytics  ",
     "  💡  Insights  ",
-    "  🤖  AI co pilot"
+    "  🤖  AI co pilot",
+    "  ⚔️  state showdown",
+    "  📄   report generator"
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1189,6 +1191,150 @@ with tab4:
                 # Fallback message if secrets management lacks the secure token
                 warning_msg = "Gemini API token is offline. Please deploy via Streamlit Cloud and configure your system secrets securely."
                 message_placeholder.warning(warning_msg)
+
+with tab5:
+    # ── UI Header ────────────────────────────────────────────────────────────
+    st.markdown("""
+        <div style="margin-bottom: 1.5rem;">
+            <h2 style="color: #00f2fe; font-family: 'Syne', sans-serif; font-size: 1.2rem; margin: 0; letter-spacing: 0.05em; text-transform: uppercase;">
+                ⚔️ State vs State Showdown
+            </h2>
+            <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
+                COMPARATIVE ANALYTICS • BENCHMARKING REGIONAL HEALTH PERFORMANCE
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # ── Dropdown Selectors ───────────────────────────────────────────────────
+    all_states = sorted(df['State'].unique()) if 'df' in locals() else []
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        state_a = st.selectbox("🎯 Select Baseline State (A)", all_states, index=all_states.index("California") if "California" in all_states else 0)
+    with col_b:
+        state_b = st.selectbox("🚀 Select Comparison State (B)", all_states, index=all_states.index("Texas") if "Texas" in all_states else min(1, len(all_states)-1))
+
+    # Data Processing synced with sidebar 'selected_disease' filter
+    df_a = df[(df['State'] == state_a) & (df['Cause Name'] == selected_disease)].sort_values('Year')
+    df_b = df[(df['State'] == state_b) & (df['Cause Name'] == selected_disease)].sort_values('Year')
+
+    if not df_a.empty and not df_b.empty:
+        import plotly.graph_objects as go
+
+        # ── Creating the Dark-Themed Plotly Line Chart ───────────────────────
+        fig_comp = go.Figure()
+        fig_comp.add_trace(go.Scatter(x=df_a['Year'], y=df_a['Age-adjusted Death Rate'], mode='lines+markers', name=state_a, line=dict(color='#00f2fe', width=3), marker=dict(size=6)))
+        fig_comp.add_trace(go.Scatter(x=df_b['Year'], y=df_b['Age-adjusted Death Rate'], mode='lines+markers', name=state_b, line=dict(color='#ff7e67', width=3), marker=dict(size=6)))
+
+        fig_comp.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e2e8f0', family='DM Sans, sans-serif'),
+            margin=dict(l=10, r=10, t=30, b=10),
+            height=340,
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', tickmode='linear', dtick=2),
+            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)')
+        )
+        
+        # Displaying inside the custom visual card class matching your theme
+        st.markdown('<div class="visual-card">', unsafe_allow_html=True)
+        st.plotly_chart(fig_comp, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # ── Cross-Sectional Glassmorphic Metric Grid ─────────────────────────
+        avg_a = df_a['Age-adjusted Death Rate'].mean()
+        avg_b = df_b['Age-adjusted Death Rate'].mean()
+        max_year_a = df_a.loc[df_a['Age-adjusted Death Rate'].idxmax()]['Year']
+        max_year_b = df_b.loc[df_b['Age-adjusted Death Rate'].idxmax()]['Year']
+
+        metric_col1, metric_col2 = st.columns(2)
+        with metric_col1:
+            st.markdown(f"""
+                <div style="background: rgba(0, 242, 254, 0.02); border: 1px solid rgba(0, 242, 254, 0.1); padding: 1.2rem; border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);">
+                    <h4 style="color: #00f2fe; margin:0; font-family: 'Syne', sans-serif; font-size:0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">{state_a} Metrics</h4>
+                    <p style="color:#94a3b8; font-family: 'DM Sans', sans-serif; font-size:0.8rem; margin:0.6rem 0 0;">• Avg Death Rate: <b style="color: #e2e8f0;">{round(avg_a, 1)}</b> per 100k</p>
+                    <p style="color:#94a3b8; font-family: 'DM Sans', sans-serif; font-size:0.8rem; margin:0.2rem 0 0;">• Peak Crisis Year: <b style="color: #e2e8f0;">{max_year_a}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
+        with metric_col2:
+            st.markdown(f"""
+                <div style="background: rgba(255, 126, 103, 0.02); border: 1px solid rgba(255, 126, 103, 0.1); padding: 1.2rem; border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);">
+                    <h4 style="color: #ff7e67; margin:0; font-family: 'Syne', sans-serif; font-size:0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">{state_b} Metrics</h4>
+                    <p style="color:#94a3b8; font-family: 'DM Sans', sans-serif; font-size:0.8rem; margin:0.6rem 0 0;">• Avg Death Rate: <b style="color: #e2e8f0;">{round(avg_b, 1)}</b> per 100k</p>
+                    <p style="color:#94a3b8; font-family: 'DM Sans', sans-serif; font-size:0.8rem; margin:0.2rem 0 0;">• Peak Crisis Year: <b style="color: #e2e8f0;">{max_year_b}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.warning("Please choose differing states with valid parameters to load analytics.")
+
+with tab6:
+    # ── UI Header ────────────────────────────────────────────────────────────
+    st.markdown("""
+        <div style="margin-bottom: 1.5rem;">
+            <h2 style="color: #00e676; font-family: 'Syne', sans-serif; font-size: 1.2rem; margin: 0; letter-spacing: 0.05em; text-transform: uppercase;">
+                📄 Executive Report Generator
+            </h2>
+            <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
+                AUTOMATED REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS FOR EXPORT
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Filtering vector synced instantly with sidebar controls (Selected State & Selected Disease Focus)
+    report_df = df[(df['State'] == selected_state) & (df['Cause Name'] == selected_disease)].sort_values('Year')
+
+    if not report_df.empty:
+        total_deaths_tracked = report_df['Number of Deaths'].sum()
+        peak_rate = report_df['Age-adjusted Death Rate'].max()
+        peak_year = report_df.loc[report_df['Age-adjusted Death Rate'].idxmax()]['Year']
+        recent_rate = report_df.iloc[-1]['Age-adjusted Death Rate']
+
+        # Compiling the internal string document block
+        report_text = f"""========================================================================
+EXECUTIVE PUBLIC HEALTH ANALYTICS REPORT
+========================================================================
+Generated On: 2026
+Target Focus: {selected_disease}
+Geographic Scope: {selected_state}
+Dataset Span: 1999 - 2017
+
+KEY STRATEGIC METRICS COMPILED:
+------------------------------------------------------------------------
+* Total Cumulative Deaths Recorded: {total_deaths_tracked:,}
+* Peak Historical Age-Adjusted Death Rate: {peak_rate} per 100k (Year: {peak_year})
+* Terminal Evaluated Closing Rate (2017): {recent_rate} per 100k
+
+ANALYTICAL INTERPRETATION SUMMARY:
+The data vectors evaluated for the target cause '{selected_disease}' in '{selected_state}' 
+indicate significant variance across the evaluated historical trajectory timeline. 
+Public health infrastructure policies must adjust resource allocation models in alignment 
+with these trends to effectively manage long-term risk vectors and lower localized mortality.
+
+------------------------------------------------------------------------
+END OF OFFICIAL CDC HEALTH METRICS COMPILED REPORT
+========================================================================\n"""
+
+        # Premium Glassmorphic Layout Wrapper for Document Display Box
+        st.markdown("""
+            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin-top: 0;">Official Compiled Document Preview:</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Displaying document within native formatting box
+        st.code(report_text, language="text")
+
+        # Customized download button using streamlit layout rules
+        st.download_button(
+            label="📥 Export Report Document (.TXT)",
+            data=report_text,
+            file_name=f"Mortality_Report_{selected_state}_{selected_disease.replace(' ', '_')}.txt",
+            mime="text/plain"
+        )
+    else:
+        st.warning("Verify active filter parameters to run compiling algorithms.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
