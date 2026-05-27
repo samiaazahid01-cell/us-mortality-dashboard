@@ -7,7 +7,9 @@ else:
     st.warning("GEMINI_API_KEY not found in secrets. LLM-powered insights will be unavailable.")
 import numpy as np
 import io 
-from fpdf import FPDF
+import base64
+import plotly.io as pio
+
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -1285,7 +1287,7 @@ with tab6:
                 📄 Custom Executive Report Builder
             </h2>
             <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
-                DYNAMIC REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS WITH GRAPH FOR PDF EXPORT
+                DYNAMIC REPORT COMPILER • COMPILED QUANTITATIVE INFRASTRUCTURE FOR EXPORT
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -1329,135 +1331,88 @@ with tab6:
         rate_diff = end_rate - start_rate
         trend_status = "an overall increase" if rate_diff > 0 else "a baseline decrease"
 
-        st.markdown("""
-            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 0.5rem; border-radius: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
-                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">🎯 Data Script Package & Charts Compiled. Ready for Export:</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Charts injected successfully.")
-
-        # --- GRAPH GENERATION (Bypassing heavy storage, using temporary bytes image) ---
+        # Display Live Preview Chart right inside the Streamlit Tab for the user
         import plotly.express as px
-        
-        fig_pdf = px.line(
+        fig_preview = px.line(
             filtered_report_df, x='Year', y=rate_col,
-            title=f"Mortality Rate Trend: {rep_disease} in {rep_state}",
-            labels={rate_col: "Death Rate (per 100k)", "Year": "Timeline Year"}
+            title=f"Trend Vector: {rep_disease} ({rep_state})",
+            template="plotly_dark"
         )
-        # Making the chart look clean and academic for the white PDF page
-        fig_pdf.update_layout(
-            paper_bgcolor='#ffffff', plot_bgcolor='#f8fafc',
-            font=dict(color='#1e293b', size=10),
-            margin=dict(l=40, r=40, t=40, b=40),
-            width=700, height=350
+        fig_preview.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#94a3b8'), margin=dict(l=20, r=20, t=40, b=20)
         )
-        fig_pdf.update_traces(line=dict(color='#0f172a', width=3), mode='lines+markers')
-        
-        # Save chart to an in-memory buffer
-        img_bytes = fig_pdf.to_image(format="png")
+        st.plotly_chart(fig_preview, use_container_width=True)
 
-        # 4. Clean FPDF Generation Logic
-        class CustomPDF(FPDF):
-            def header(self):
-                self.set_fill_color(26, 32, 44) 
-                self.rect(0, 0, 210, 38, 'F')
-                self.set_font('Helvetica', 'B', 16)
-                self.set_text_color(255, 255, 255)
-                self.set_y(10)
-                self.cell(0, 10, "OFFICIAL PUBLIC HEALTH ANALYTICS REPORT", ln=True, align='C')
-                self.set_font('Helvetica', '', 9)
-                self.set_text_color(160, 174, 192)
-                self.cell(0, 5, "CDC NCHS MORTALITY INSIGHTS SYSTEM - AUTOMATED INTEL SUMMARY", ln=True, align='C')
-                self.ln(15)
+        # 4. Generate Interactive Standalone HTML Report (Highly professional alternative to PDF)
+        # It embeds charts flawlessly without needing system level image packages!
+        chart_html = pio.to_html(fig_preview, include_plotlyjs='cdn', full_html=False)
 
-            def footer(self):
-                self.set_y(-15)
-                self.set_font('Helvetica', 'I', 8)
-                self.set_text_color(113, 128, 150)
-                self.cell(0, 10, "OFFICIAL REPORT SYSTEM GENERATED - CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA", align='C')
+        html_document = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #f8fafc; color: #1e293b; }}
+                .report-card {{ background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 6px solid #0f172a; }}
+                .header-bar {{ background-color: #0f172a; color: white; padding: 20px; border-radius: 6px; margin-bottom: 20px; }}
+                .meta-table {{ width: 100%; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }}
+                h2 {{ color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; }}
+                .metric-box {{ background-color: #f1f5f9; padding: 15px; border-radius: 6px; font-weight: 500; line-height: 1.7; }}
+                .footer {{ text-align: center; margin-top: 40px; font-size: 11px; color: #64748b; }}
+            </style>
+        </head>
+        <body>
+            <div class="report-card">
+                <div class="header-bar">
+                    <h1 style="margin:0; font-size:22px;">PUBLIC HEALTH EXECUTIVE BRIEFING</h1>
+                    <p style="margin:5px 0 0 0; font-size:12px; color:#94a3b8;">AUTOMATED EDA MORTALITY COMPILER</p>
+                </div>
+                
+                <table class="meta-table">
+                    <tr>
+                        <td><b>Target Vector:</b> {rep_disease}</td>
+                        <td><b>Region Scope:</b> {rep_state}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Timeline Window:</b> {rep_years[0]} - {rep_years[1]}</td>
+                        <td><b>Generated Date:</b> 2026</td>
+                    </tr>
+                </table>
 
-        # Create PDF object
-        pdf = CustomPDF(orientation='P', unit='mm', format='A4')
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Meta Grid Block
-        pdf.set_fill_color(247, 250, 252)
-        pdf.rect(15, 45, 180, 22, 'F')
-        pdf.set_text_color(45, 55, 72)
-        
-        pdf.set_y(47)
-        pdf.set_x(18)
-        pdf.set_font('Helvetica', 'B', 10)
-        pdf.cell(90, 5, f"Target Disease: {rep_disease}")
-        pdf.cell(90, 5, f"Geographic Scope: {rep_state}", ln=True)
-        
-        pdf.set_x(18)
-        pdf.cell(90, 5, f"Timeline Window: {rep_years[0]} - {rep_years[1]}")
-        pdf.cell(90, 5, "Compiled Date: 2026", ln=True)
-        
-        # Section 1: Data Calculations
-        pdf.ln(12)
-        pdf.set_font('Helvetica', 'B', 13)
-        pdf.set_text_color(26, 32, 44)
-        pdf.cell(0, 7, "1. Clinical Baseline Calculations", ln=True)
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-        pdf.ln(3)
-        
-        pdf.set_font('Helvetica', '', 10)
-        pdf.set_text_color(45, 55, 72)
-        calc_text = (
-            f"* Cumulative Mortality Load: {rep_total_deaths:,} total deaths recorded within this timeframe.\n"
-            f"* Timeline Trend Performance: {round(rep_avg_rate, 2)} average deaths per 100k population.\n"
-            f"* Critical Peak Crisis Year: Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k."
-        )
-        pdf.multi_cell(0, 6, calc_text)
-        
-        # --- GRAPH INJECTION POINT ---
-        pdf.ln(5)
-        # Injecting the in-memory graph image directly into the PDF template layout
-        pdf.image(io.BytesIO(img_bytes), x=20, y=pdf.get_y(), w=170)
-        pdf.ln(95) # Creating breathing space so text doesn't overlap the chart image
+                <h2>1. Core Metrics Summary</h2>
+                <div class="metric-box">
+                    • Cumulative Mortality Load: {rep_total_deaths:,} total recorded deaths.<br>
+                    • Dynamic Timeline Baseline: {round(rep_avg_rate, 2)} average deaths per 100k population.<br>
+                    • Peak Target Crisis Year: Year {int(rep_peak_row['Year'])} reached maximum severity of {rep_peak_row[rate_col]} per 100k.
+                </div>
 
-        # Section 2: Narrative
-        pdf.set_font('Helvetica', 'B', 13)
-        pdf.set_text_color(26, 32, 44)
-        pdf.cell(0, 7, "2. Statistical Trajectory Narrative", ln=True)
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-        pdf.ln(3)
-        
-        pdf.set_font('Helvetica', '', 10)
-        pdf.set_text_color(45, 55, 72)
-        paragraph1 = f"In the opening assessment window of {rep_years[0]}, the localized age-adjusted death rate for {rep_disease} within {rep_state} was evaluated at {start_rate} per 100k. Upon reaching the terminal reporting closing phase of {rep_years[1]}, the validated metrics modified to {end_rate} per 100k."
-        paragraph2 = f"This shifting trend vector mathematically represents {trend_status} of approximately {abs(round(rate_diff, 2))} deaths per 100k citizens over the course of the customized historical era window."
-        
-        pdf.multi_cell(0, 6, paragraph1)
-        pdf.ln(3)
-        pdf.multi_cell(0, 6, paragraph2)
-        
-        # Section 3: Strategic Advice
-        pdf.ln(6)
-        pdf.set_font('Helvetica', 'B', 13)
-        pdf.set_text_color(26, 32, 44)
-        pdf.cell(0, 7, "3. Strategic Resource Allocation Advice", ln=True)
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-        pdf.ln(3)
-        
-        pdf.set_font('Helvetica', '', 10)
-        pdf.set_text_color(45, 55, 72)
-        advice_text = f"The automated public health analytics architecture recommends that medical policy vectors inside {rep_state} optimize hospital facility metrics and healthcare financial infrastructure in cross-sectional alignment with the volatility parameters noted around the peak year of {int(rep_peak_row['Year'])}."
-        pdf.multi_cell(0, 6, advice_text)
+                <h2>2. Statistical Visual Trend</h2>
+                <div style="margin: 20px 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                    {chart_html}
+                </div>
 
-        # Output to bytes pipeline
-        pdf_output = pdf.output()
-        pdf_bytes = bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
+                <h2>3. Analytical Narrative Interpretation</h2>
+                <p>
+                    During the initial evaluation milestone of {rep_years[0]}, the statistical age-adjusted death rate within the territorial boundaries of {rep_state} hit an operational reference index of <b>{start_rate}</b> per 100k population. By the standard terminal milestone interval of {rep_years[1]}, the verified metrics tracking indexes converged at <b>{end_rate}</b> per 100k.
+                </p>
+                <p>
+                    This delta variation trajectory documents <b>{trend_status}</b> of approximately <b>{abs(round(rate_diff, 2))}</b> units per 100k citizens across the designated custom timeline matrix.
+                </p>
 
+                <div class="footer">
+                    CONFIDENTIAL DATA REPOSITORY SYSTEM - GENERATED LOGISTICS SUMMARY
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # 5. Premium Interactive HTML Download Trigger
         st.download_button(
-            label=f"📥 Download Official PDF Report with Charts",
-            data=pdf_bytes,
-            file_name=f"Official_Report_{rep_state}_{rep_disease.replace(' ', '_')}.pdf",
-            mime="application/pdf"
+            label="📥 Export Executive Report Bundle (.HTML)",
+            data=html_document,
+            file_name=f"Executive_Report_{rep_state}_{rep_disease.replace(' ', '_')}.html",
+            mime="text/html"
         )
     else:
         st.warning("No records found matching these metrics. Modify sliders to reload configuration fields.")
