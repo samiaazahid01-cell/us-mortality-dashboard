@@ -1285,7 +1285,7 @@ with tab6:
                 📄 Custom Executive Report Builder
             </h2>
             <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
-                DYNAMIC REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS FOR PDF EXPORT
+                DYNAMIC REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS WITH GRAPH FOR PDF EXPORT
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -1331,13 +1331,33 @@ with tab6:
 
         st.markdown("""
             <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 0.5rem; border-radius: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
-                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">🎯 Data Script Package Compiled. Ready for Secure PDF Extraction:</p>
+                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">🎯 Data Script Package & Charts Compiled. Ready for Export:</p>
             </div>
         """, unsafe_allow_html=True)
         
-        st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Ready to deploy print engine.")
+        st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Charts injected successfully.")
 
-        # 4. Clean FPDF Generation Logic (Standard ASCII only to avoid Encoding Errors)
+        # --- GRAPH GENERATION (Bypassing heavy storage, using temporary bytes image) ---
+        import plotly.express as px
+        
+        fig_pdf = px.line(
+            filtered_report_df, x='Year', y=rate_col,
+            title=f"Mortality Rate Trend: {rep_disease} in {rep_state}",
+            labels={rate_col: "Death Rate (per 100k)", "Year": "Timeline Year"}
+        )
+        # Making the chart look clean and academic for the white PDF page
+        fig_pdf.update_layout(
+            paper_bgcolor='#ffffff', plot_bgcolor='#f8fafc',
+            font=dict(color='#1e293b', size=10),
+            margin=dict(l=40, r=40, t=40, b=40),
+            width=700, height=350
+        )
+        fig_pdf.update_traces(line=dict(color='#0f172a', width=3), mode='lines+markers')
+        
+        # Save chart to an in-memory buffer
+        img_bytes = fig_pdf.to_image(format="png")
+
+        # 4. Clean FPDF Generation Logic
         class CustomPDF(FPDF):
             def header(self):
                 self.set_fill_color(26, 32, 44) 
@@ -1348,7 +1368,6 @@ with tab6:
                 self.cell(0, 10, "OFFICIAL PUBLIC HEALTH ANALYTICS REPORT", ln=True, align='C')
                 self.set_font('Helvetica', '', 9)
                 self.set_text_color(160, 174, 192)
-                # Removed the middle bullet point to completely bypass Unicode Errors
                 self.cell(0, 5, "CDC NCHS MORTALITY INSIGHTS SYSTEM - AUTOMATED INTEL SUMMARY", ln=True, align='C')
                 self.ln(15)
 
@@ -1378,7 +1397,7 @@ with tab6:
         pdf.cell(90, 5, f"Timeline Window: {rep_years[0]} - {rep_years[1]}")
         pdf.cell(90, 5, "Compiled Date: 2026", ln=True)
         
-        # Section 1
+        # Section 1: Data Calculations
         pdf.ln(12)
         pdf.set_font('Helvetica', 'B', 13)
         pdf.set_text_color(26, 32, 44)
@@ -1388,8 +1407,6 @@ with tab6:
         
         pdf.set_font('Helvetica', '', 10)
         pdf.set_text_color(45, 55, 72)
-        
-        # Clean plain text format
         calc_text = (
             f"* Cumulative Mortality Load: {rep_total_deaths:,} total deaths recorded within this timeframe.\n"
             f"* Timeline Trend Performance: {round(rep_avg_rate, 2)} average deaths per 100k population.\n"
@@ -1397,8 +1414,13 @@ with tab6:
         )
         pdf.multi_cell(0, 6, calc_text)
         
-        # Section 2
-        pdf.ln(8)
+        # --- GRAPH INJECTION POINT ---
+        pdf.ln(5)
+        # Injecting the in-memory graph image directly into the PDF template layout
+        pdf.image(io.BytesIO(img_bytes), x=20, y=pdf.get_y(), w=170)
+        pdf.ln(95) # Creating breathing space so text doesn't overlap the chart image
+
+        # Section 2: Narrative
         pdf.set_font('Helvetica', 'B', 13)
         pdf.set_text_color(26, 32, 44)
         pdf.cell(0, 7, "2. Statistical Trajectory Narrative", ln=True)
@@ -1414,8 +1436,8 @@ with tab6:
         pdf.ln(3)
         pdf.multi_cell(0, 6, paragraph2)
         
-        # Section 3
-        pdf.ln(8)
+        # Section 3: Strategic Advice
+        pdf.ln(6)
         pdf.set_font('Helvetica', 'B', 13)
         pdf.set_text_color(26, 32, 44)
         pdf.cell(0, 7, "3. Strategic Resource Allocation Advice", ln=True)
@@ -1432,7 +1454,7 @@ with tab6:
         pdf_bytes = bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
 
         st.download_button(
-            label=f"📥 Download Official PDF Report",
+            label=f"📥 Download Official PDF Report with Charts",
             data=pdf_bytes,
             file_name=f"Official_Report_{rep_state}_{rep_disease.replace(' ', '_')}.pdf",
             mime="application/pdf"
