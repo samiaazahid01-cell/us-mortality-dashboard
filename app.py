@@ -1337,25 +1337,26 @@ with tab6:
         
         st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Ready to deploy print engine.")
 
-        # 4. FPDF Generation Logic (No system dependencies)
+        # 4. Clean FPDF Generation Logic (Standard ASCII only to avoid Encoding Errors)
         class CustomPDF(FPDF):
             def header(self):
-                self.set_fill_color(26, 32, 44) # Dark Header bar like our dashboard
+                self.set_fill_color(26, 32, 44) 
                 self.rect(0, 0, 210, 38, 'F')
-                self.set_font('Helvetica', 'B', 18)
+                self.set_font('Helvetica', 'B', 16)
                 self.set_text_color(255, 255, 255)
                 self.set_y(10)
                 self.cell(0, 10, "OFFICIAL PUBLIC HEALTH ANALYTICS REPORT", ln=True, align='C')
                 self.set_font('Helvetica', '', 9)
                 self.set_text_color(160, 174, 192)
-                self.cell(0, 5, "CDC NCHS MORTALITY INSIGHTS SYSTEM • AUTOMATED INTEL SUMMARY", ln=True, align='C')
+                # Removed the middle bullet point to completely bypass Unicode Errors
+                self.cell(0, 5, "CDC NCHS MORTALITY INSIGHTS SYSTEM - AUTOMATED INTEL SUMMARY", ln=True, align='C')
                 self.ln(15)
 
             def footer(self):
                 self.set_y(-15)
                 self.set_font('Helvetica', 'I', 8)
                 self.set_text_color(113, 128, 150)
-                self.cell(0, 10, "OFFICIAL REPORT SYSTEM GENERATED • CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA", align='C')
+                self.cell(0, 10, "OFFICIAL REPORT SYSTEM GENERATED - CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA", align='C')
 
         # Create PDF object
         pdf = CustomPDF(orientation='P', unit='mm', format='A4')
@@ -1387,9 +1388,14 @@ with tab6:
         
         pdf.set_font('Helvetica', '', 10)
         pdf.set_text_color(45, 55, 72)
-        pdf.multi_cell(0, 6, f"- Cumulative Mortality Load: {rep_total_deaths:,} total deaths recorded within this timeframe.\n"
-                             f"- Timeline Trend Performance: {round(rep_avg_rate, 2)} average deaths per 100k population.\n"
-                             f"- Critical Peak Crisis Year: Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k.")
+        
+        # Clean plain text format
+        calc_text = (
+            f"* Cumulative Mortality Load: {rep_total_deaths:,} total deaths recorded within this timeframe.\n"
+            f"* Timeline Trend Performance: {round(rep_avg_rate, 2)} average deaths per 100k population.\n"
+            f"* Critical Peak Crisis Year: Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k."
+        )
+        pdf.multi_cell(0, 6, calc_text)
         
         # Section 2
         pdf.ln(8)
@@ -1421,7 +1427,7 @@ with tab6:
         advice_text = f"The automated public health analytics architecture recommends that medical policy vectors inside {rep_state} optimize hospital facility metrics and healthcare financial infrastructure in cross-sectional alignment with the volatility parameters noted around the peak year of {int(rep_peak_row['Year'])}."
         pdf.multi_cell(0, 6, advice_text)
 
-        # Output to Streamlit download button via in-memory bytes
+        # Output to bytes pipeline
         pdf_output = pdf.output()
         pdf_bytes = bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
 
