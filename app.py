@@ -1275,6 +1275,7 @@ with tab5:
             """, unsafe_allow_html=True)
     else:
         st.warning("Please choose differing states with valid parameters to load analytics.")
+
 with tab6:
     st.markdown("""
         <div style="margin-bottom: 1.5rem;">
@@ -1287,12 +1288,28 @@ with tab6:
         </div>
     """, unsafe_allow_html=True)
 
-    # Dynamic Column Resolver
+    # 1. Safe Column Name Resolver
     cause_col = 'Cause Name' if 'Cause Name' in df.columns else 'Cause'
     rate_col = 'Age-adjusted Death Rate' if 'Age-adjusted Death Rate' in df.columns else 'Death_Rate'
     deaths_col = 'Number of Deaths' if 'Number of Deaths' in df.columns else 'Deaths'
 
-    report_df = df[(df['State'] == selected_state) & (df[cause_col] == selected_disease)].sort_values('Year')
+    # 2. Safe Variable Resolver (NameError ko khatam karne ke liye)
+    if 'selected_disease' in locals():
+        report_disease = selected_disease
+    elif 'disease_focus' in locals():
+        report_disease = disease_focus
+    else:
+        report_disease = df[cause_col].unique()[0]
+
+    if 'selected_state' in locals():
+        report_state = selected_state
+    elif 'state_focus' in locals():
+        report_state = state_focus
+    else:
+        report_state = "California"
+
+    # 3. Row Filter
+    report_df = df[(df['State'] == report_state) & (df[cause_col] == report_disease)].sort_values('Year')
 
     if not report_df.empty:
         total_deaths_tracked = report_df[deaths_col].sum()
@@ -1304,8 +1321,8 @@ with tab6:
 EXECUTIVE PUBLIC HEALTH ANALYTICS REPORT
 ========================================================================
 Generated On: 2026
-Target Focus: {selected_disease}
-Geographic Scope: {selected_state}
+Target Focus: {report_disease}
+Geographic Scope: {report_state}
 Dataset Span: 1999 - 2017
 
 KEY STRATEGIC METRICS COMPILED:
@@ -1315,7 +1332,7 @@ KEY STRATEGIC METRICS COMPILED:
 * Terminal Evaluated Closing Rate (2017): {recent_rate} per 100k
 
 ANALYTICAL INTERPRETATION SUMMARY:
-The data vectors evaluated for the target cause '{selected_disease}' in '{selected_state}' 
+The data vectors evaluated for the target cause '{report_disease}' in '{report_state}' 
 indicate significant variance across the evaluated historical trajectory timeline. 
 Public health infrastructure policies must adjust resource allocation models in alignment 
 with these trends to effectively manage long-term risk vectors and lower localized mortality.
@@ -1335,12 +1352,11 @@ END OF OFFICIAL CDC HEALTH METRICS COMPILED REPORT
         st.download_button(
             label="📥 Export Report Document (.TXT)",
             data=report_text,
-            file_name=f"Mortality_Report_{selected_state}_{selected_disease.replace(' ', '_')}.txt",
+            file_name=f"Mortality_Report_{report_state}_{report_disease.replace(' ', '_')}.txt",
             mime="text/plain"
         )
     else:
         st.warning("Verify active filter parameters to run compiling algorithms.")
-
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="dashboard-footer">
