@@ -468,10 +468,11 @@ st.markdown(f"""
 # ══════════════════════════════════════════════════════════════════════════════
 # TABS
 # ══════════════════════════════════════════════════════════════════════════════
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "  📊  Overview & Trends  ",
     "  🗺  Maps & Analytics  ",
-    "  💡  Insights  "
+    "  💡  Insights  ",
+    "  🤖  AI co pilot"
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1077,65 +1078,6 @@ with tab3:
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # ── PASTE THIS PART ONLY (MODEL + CHAT BOX INITIALIZATION) ────────────────
-    st.markdown('<div style="height: 2rem;"></div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="section-header">
-      <div class="dot"></div><h2>Public Health AI Co-Pilot</h2><div class="line"></div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # SYSTEM INSTRUCTIONS: AI ko train karne ke liye
-    system_instruction = """
-    You are an expert Public Health AI Assistant built into a US Mortality Dashboard.
-    Your job is to answer questions related to healthcare, disease causes (like Heart disease, Cancer, Stroke, etc.), 
-    mortality rates, prevention, and CDC public health data. 
-    Keep your tone professional, empathetic, scientific, and concise. 
-    If the user asks something completely unrelated to healthcare or public health, politely guide them back to the topic.
-    """
-    
-    # 1. MODEL SETUP (Yeh line zaroor honi chahiye, is se model define hota hai)
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=system_instruction
-    )
-    
-    # 2. CHAT HISTORY INITIALIZATION
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-        
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    st.markdown('<div class="chart-title">💬 Mortality Intelligence Chat</div>', unsafe_allow_html=True)
-    st.markdown('<div class="chart-subtitle">Ask anything about leading causes of death, trends, prevention, or statistics.</div>', unsafe_allow_html=True)
-    
-    # Purani chat history render karne ke liye
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            
-    # 3. USER INPUT & RESPONSE LOGIC
-    if user_query := st.chat_input("Ask AI (e.g., Why is Heart Disease the top killer in the US?)"):
-        with st.chat_message("user"):
-            st.markdown(user_query)
-        st.session_state.chat_history.append({"role": "user", "content": user_query})
-        
-        with st.chat_message("assistant"):
-            with st.spinner("Analyzing public health data..."):
-                try:
-                    # Model response generate karega
-                    response = model.generate_content(user_query)
-                    ai_response = response.text
-                    st.markdown(ai_response)
-                    st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
-                except Exception as e:
-                    st.error(f"AI Error: {str(e)}")
-                    st.info("Kindly make sure your Gemini API key is valid in Streamlit Secrets.")
-                    
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div style="height: 1.5rem;"></div>', unsafe_allow_html=True)
-    # ──────────────────────────────────────────────────────────────────────────
-
     # Data table at bottom
     st.markdown("""
     <div class="section-header" style="margin-top:2.5rem">
@@ -1152,6 +1094,101 @@ with tab3:
             use_container_width=True,
             height=300,
         )
+
+with tab4:
+    # ── Header ───────────────────────────────────────────────────────────────
+    st.markdown("""
+        <div style="margin-bottom: 1.5rem;">
+            <h2 style="color: #bc77ff; font-family: 'Syne', sans-serif; font-size: 1.2rem; margin: 0; letter-spacing: 0.05em; text-transform: uppercase;">
+                🤖 Public Health AI Co-Pilot
+            </h2>
+            <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
+                MORTALITY INTELLIGENCE CHAT • POWERED BY GEMINI 2.5 FLASH
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # ── AI Configuration & System Prompt ──────────────────────────────────────
+    # Initializing systemic boundaries for the public health persona
+    SYSTEM_INSTRUCTION = """
+    You are an expert, highly professional Public Health Analyst and Data Scientist specializing in US Mortality Analytics.
+    Your persona is strictly bounded:
+    1. You must only answer queries related to healthcare, mortality statistics, public health trends, CDC data, or epidemiology.
+    2. Analyze trends scientifically using epidemiological context (e.g., policy shifts, medical advancements, socio-economic crises like the opioid epidemic).
+    3. If a user asks an out-of-scope query (e.g., general programming, entertainment, sports, or non-health math), politely decline by stating:
+       "I am programmed strictly as a Public Health AI Assistant to analyze mortality statistics. Please keep your queries focused on healthcare data analytics."
+    4. Keep your tone data-backed, clinical, yet highly accessible.
+    """
+
+    # ── Chat Session Initialization ───────────────────────────────────────────
+    if "messages" not in st.session_state:
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hello! I am your Mortality Intelligence Co-Pilot. Ask me anything about US death rates, state comparisons, or specific disease trends from 1999 to 2017."}
+        ]
+
+    # ── Display Existing Chat History ─────────────────────────────────────────
+    # Custom CSS wrapper ensures it fits the glassmorphism theme flawlessly
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(f"""
+                <div style="font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.5; color: #e2e8f0;">
+                    {message["content"]}
+                </div>
+            """, unsafe_allow_html=True)
+
+    # ── User Input & AI Execution Trigger ─────────────────────────────────────
+    if user_query := st.chat_input("Ask about mortality rates, trends, or state comparisons..."):
+        
+        # Display user message instantly
+        with st.chat_message("user"):
+            st.markdown(f'<div style="font-family: \'DM Sans\', sans-serif; font-size: 0.85rem; color: #e2e8f0;">{user_query}</div>', unsafe_allow_html=True)
+        
+        st.session_state.messages.append({"role": "user", "content": user_query})
+
+        # Generate response using Google Generative AI
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            
+            # Check if API Key is configured via Secrets Management
+            if "GEMINI_API_KEY" in st.secrets:
+                try:
+                    # Setting up the model configuration pipelines
+                    model = genai.GenerativeModel(
+                        model_name="gemini-2.5-flash",
+                        system_instruction=SYSTEM_INSTRUCTION
+                    )
+                    
+                    # Packaging conversational context history for the model
+                    chat_context = []
+                    for msg in st.session_state.messages[:-1]:
+                        role_label = "user" if msg["role"] == "user" else "model"
+                        chat_context.append({"role": role_label, "parts": [msg["content"]]})
+                    
+                    # Fire API request with safety parameters
+                    response = model.generate_content(
+                        user_query,
+                        generation_config={"temperature": 0.2} # Low temperature for high factual accuracy
+                    )
+                    
+                    ai_response = response.text
+                    
+                    # Render response beautifully inside the container
+                    message_placeholder.markdown(f"""
+                        <div style="font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.5; color: #e2e8f0;">
+                            {ai_response}
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Store response to persistence state
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                    
+                except Exception as e:
+                    error_msg = f"An API processing anomaly occurred: {str(e)}"
+                    message_placeholder.error(error_msg)
+            else:
+                # Fallback message if secrets management lacks the secure token
+                warning_msg = "Gemini API token is offline. Please deploy via Streamlit Cloud and configure your system secrets securely."
+                message_placeholder.warning(warning_msg)
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
