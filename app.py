@@ -6,6 +6,8 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.warning("GEMINI_API_KEY not found in secrets. LLM-powered insights will be unavailable.")
 import numpy as np
+import io 
+from weasyprint import HTML
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -1280,83 +1282,143 @@ with tab6:
     st.markdown("""
         <div style="margin-bottom: 1.5rem;">
             <h2 style="color: #00e676; font-family: 'Syne', sans-serif; font-size: 1.2rem; margin: 0; letter-spacing: 0.05em; text-transform: uppercase;">
-                📄 Executive Report Generator
+                📄 Custom Executive Report Builder
             </h2>
             <p style="color: #94a3b8; font-size: 0.75rem; margin: 0.2rem 0 0;">
-                AUTOMATED REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS FOR EXPORT
+                DYNAMIC REPORT COMPILER • PACKAGING DYNAMIC MEDICAL INSIGHTS FOR PDF EXPORT
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. Safe Column Name Resolver
+    # 1. Column Name Resolvers
     cause_col = 'Cause Name' if 'Cause Name' in df.columns else 'Cause'
     rate_col = 'Age-adjusted Death Rate' if 'Age-adjusted Death Rate' in df.columns else 'Death_Rate'
     deaths_col = 'Number of Deaths' if 'Number of Deaths' in df.columns else 'Deaths'
 
-    # 2. Safe Variable Resolver (NameError ko khatam karne ke liye)
-    if 'selected_disease' in locals():
-        report_disease = selected_disease
-    elif 'disease_focus' in locals():
-        report_disease = disease_focus
-    else:
-        report_disease = df[cause_col].unique()[0]
+    # 2. Interactive Report Customizer Widgets
+    st.markdown("<p style='font-size: 0.85rem; color: #00e676; font-weight: bold; margin-bottom: 0.5rem;'>⚙️ PDF Report Configuration:</p>", unsafe_allow_html=True)
+    
+    all_states_rep = sorted(df['State'].unique())
+    all_causes_rep = sorted(df[cause_col].unique())
+    
+    rep_col1, rep_col2, rep_col3 = st.columns(3)
+    with rep_col1:
+        rep_state = st.selectbox("📂 Focus Region / State", all_states_rep, index=all_states_rep.index("United States") if "United States" in all_states_rep else 0, key="pdf_widget_state")
+    with rep_col2:
+        rep_disease = st.selectbox("🔬 Primary Medical Cause", all_causes_rep, key="pdf_widget_disease")
+    with rep_col3:
+        min_yr, max_yr = int(df['Year'].min()), int(df['Year'].max())
+        rep_years = st.slider("📅 Timeline Range", min_yr, max_yr, (min_yr, max_yr), key="pdf_widget_years")
 
-    if 'selected_state' in locals():
-        report_state = selected_state
-    elif 'state_focus' in locals():
-        report_state = state_focus
-    else:
-        report_state = "California"
+    # 3. Dynamic Data Query Processing
+    filtered_report_df = df[
+        (df['State'] == rep_state) & 
+        (df[cause_col] == rep_disease) & 
+        (df['Year'] >= rep_years[0]) & 
+        (df['Year'] <= rep_years[1])
+    ].sort_values('Year')
 
-    # 3. Row Filter
-    report_df = df[(df['State'] == report_state) & (df[cause_col] == report_disease)].sort_values('Year')
+    if not filtered_report_df.empty:
+        # Calculations
+        rep_total_deaths = filtered_report_df[deaths_col].sum()
+        rep_avg_rate = filtered_report_df[rate_col].mean()
+        rep_peak_row = filtered_report_df.loc[filtered_report_df[rate_col].idxmax()]
+        
+        start_rate = filtered_report_df.iloc[0][rate_col]
+        end_rate = filtered_report_df.iloc[-1][rate_col]
+        rate_diff = end_rate - start_rate
+        trend_status = "an overall increase" if rate_diff > 0 else "a baseline decrease"
 
-    if not report_df.empty:
-        total_deaths_tracked = report_df[deaths_col].sum()
-        peak_rate = report_df[rate_col].max()
-        peak_year = report_df.loc[report_df[rate_col].idxmax()]['Year']
-        recent_rate = report_df.iloc[-1][rate_col]
+        # 4. HTML Template for PDF
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                @page {{ size: A4; margin: 20mm 15mm; background-color: #ffffff; }}
+                body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3748; line-height: 1.6; margin: 0; padding: 0; }}
+                .header-bar {{ background-color: #1a202c; color: #ffffff; padding: 25px; margin-bottom: 25px; border-radius: 4px; }}
+                .header-bar h1 {{ margin: 0; font-size: 20pt; text-transform: uppercase; letter-spacing: 1px; }}
+                .header-bar p {{ margin: 5px 0 0 0; font-size: 10pt; color: #a0aec0; }}
+                .meta-grid {{ margin-bottom: 25px; background: #f7fafc; padding: 15px; border-left: 4px solid #4a5568; }}
+                .meta-grid td {{ padding: 4px 15px; font-size: 10pt; }}
+                h2 {{ font-size: 14pt; color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }}
+                .metric-box {{ background-color: #edf2f7; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 10pt; }}
+                .footer {{ margin-top: 50px; text-align: center; font-size: 8pt; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 10px; }}
+            </style>
+        </head>
+        <body>
+            <div class="header-bar">
+                <h1>Official Public Health Analytics Report</h1>
+                <p>CDC NCHS MORTALITY INSIGHTS SYSTEM • AUTOMATED INTEL SUMMARY</p>
+            </div>
+            
+            <div class="meta-grid">
+                <table width="100%">
+                    <tr>
+                        <td><b>Target Disease:</b> {rep_disease}</td>
+                        <td><b>Geographic Scope:</b> {rep_state}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Timeline Window:</b> {rep_years[0]} - {rep_years[1]}</td>
+                        <td><b>Compiled Date:</b> 2026</td>
+                    </tr>
+                </table>
+            </div>
 
-        report_text = f"""========================================================================
-EXECUTIVE PUBLIC HEALTH ANALYTICS REPORT
-========================================================================
-Generated On: 2026
-Target Focus: {report_disease}
-Geographic Scope: {report_state}
-Dataset Span: 1999 - 2017
+            <h2>1. Clinical Baseline Calculations</h2>
+            <div class="metric-box">
+                • <b>Cumulative Mortality Load:</b> {rep_total_deaths:,} total deaths recorded within this timeframe.<br>
+                • <b>Timeline Trend Performance:</b> {round(rep_avg_rate, 2)} average deaths per 100k population.<br>
+                • <b>Critical Peak Crisis Year:</b> Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k.
+            </div>
 
-KEY STRATEGIC METRICS COMPILED:
-------------------------------------------------------------------------
-* Total Cumulative Deaths Recorded: {total_deaths_tracked:,}
-* Peak Historical Age-Adjusted Death Rate: {peak_rate} per 100k (Year: {peak_year})
-* Terminal Evaluated Closing Rate (2017): {recent_rate} per 100k
+            <h2>2. Statistical Trajectory Narrative</h2>
+            <p>
+                In the opening assessment window of {rep_years[0]}, the localized age-adjusted death rate for {rep_disease} within {rep_state} 
+                was evaluated at <b>{start_rate}</b> per 100k. Upon reaching the terminal reporting closing phase of {rep_years[1]}, 
+                the validated metrics modified to <b>{end_rate}</b> per 100k. 
+            </p>
+            <p>
+                This shifting trend vector mathematically represents <b>{trend_status}</b> of approximately <b>{abs(round(rate_diff, 2))}</b> 
+                deaths per 100k citizens over the course of the customized historical era window.
+            </p>
 
-ANALYTICAL INTERPRETATION SUMMARY:
-The data vectors evaluated for the target cause '{report_disease}' in '{report_state}' 
-indicate significant variance across the evaluated historical trajectory timeline. 
-Public health infrastructure policies must adjust resource allocation models in alignment 
-with these trends to effectively manage long-term risk vectors and lower localized mortality.
+            <h2>3. Strategic Resource Allocation Advice</h2>
+            <p>
+                The automated public health analytics architecture recommends that medical policy vectors inside {rep_state} 
+                optimize hospital facility metrics and healthcare financial infrastructure in cross-sectional alignment with the 
+                volatility parameters noted around the peak year of {int(rep_peak_row['Year'])}.
+            </p>
 
-------------------------------------------------------------------------
-END OF OFFICIAL CDC HEALTH METRICS COMPILED REPORT
-========================================================================\n"""
+            <div class="footer">
+                OFFICIAL REPORT SYSTEM GENERATED • CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA
+            </div>
+        </body>
+        </html>
+        """
 
         st.markdown("""
-            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 0.5rem; border-radius: 12px; margin-bottom: 0.5rem;">
-                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">Official Compiled Document Preview:</p>
+            <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 0.5rem; border-radius: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
+                <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">🎯 Data Script Package Compiled. Ready for Secure PDF Extraction:</p>
             </div>
         """, unsafe_allow_html=True)
         
-        st.code(report_text, language="text")
+        st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Ready to deploy print engine.")
+
+        # PDF Compilation
+        pdf_buffer = io.BytesIO()
+        HTML(string=html_content).write_pdf(pdf_buffer)
+        pdf_data = pdf_buffer.getvalue()
 
         st.download_button(
-            label="📥 Export Report Document (.TXT)",
-            data=report_text,
-            file_name=f"Mortality_Report_{report_state}_{report_disease.replace(' ', '_')}.txt",
-            mime="text/plain"
+            label=f"📥 Download Official PDF Report",
+            data=pdf_data,
+            file_name=f"Official_Report_{rep_state}_{rep_disease.replace(' ', '_')}.pdf",
+            mime="application/pdf"
         )
     else:
-        st.warning("Verify active filter parameters to run compiling algorithms.")
+        st.warning("No records found matching these metrics. Modify sliders to reload configuration fields.")
+
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="dashboard-footer">
