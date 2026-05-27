@@ -7,7 +7,7 @@ else:
     st.warning("GEMINI_API_KEY not found in secrets. LLM-powered insights will be unavailable.")
 import numpy as np
 import io 
-from weasyprint import HTML
+from fpdf import FPDF
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -1329,74 +1329,6 @@ with tab6:
         rate_diff = end_rate - start_rate
         trend_status = "an overall increase" if rate_diff > 0 else "a baseline decrease"
 
-        # 4. HTML Template for PDF
-        html_content = f"""
-        <html>
-        <head>
-            <style>
-                @page {{ size: A4; margin: 20mm 15mm; background-color: #ffffff; }}
-                body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3748; line-height: 1.6; margin: 0; padding: 0; }}
-                .header-bar {{ background-color: #1a202c; color: #ffffff; padding: 25px; margin-bottom: 25px; border-radius: 4px; }}
-                .header-bar h1 {{ margin: 0; font-size: 20pt; text-transform: uppercase; letter-spacing: 1px; }}
-                .header-bar p {{ margin: 5px 0 0 0; font-size: 10pt; color: #a0aec0; }}
-                .meta-grid {{ margin-bottom: 25px; background: #f7fafc; padding: 15px; border-left: 4px solid #4a5568; }}
-                .meta-grid td {{ padding: 4px 15px; font-size: 10pt; }}
-                h2 {{ font-size: 14pt; color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; margin-top: 25px; }}
-                .metric-box {{ background-color: #edf2f7; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 10pt; }}
-                .footer {{ margin-top: 50px; text-align: center; font-size: 8pt; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 10px; }}
-            </style>
-        </head>
-        <body>
-            <div class="header-bar">
-                <h1>Official Public Health Analytics Report</h1>
-                <p>CDC NCHS MORTALITY INSIGHTS SYSTEM • AUTOMATED INTEL SUMMARY</p>
-            </div>
-            
-            <div class="meta-grid">
-                <table width="100%">
-                    <tr>
-                        <td><b>Target Disease:</b> {rep_disease}</td>
-                        <td><b>Geographic Scope:</b> {rep_state}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Timeline Window:</b> {rep_years[0]} - {rep_years[1]}</td>
-                        <td><b>Compiled Date:</b> 2026</td>
-                    </tr>
-                </table>
-            </div>
-
-            <h2>1. Clinical Baseline Calculations</h2>
-            <div class="metric-box">
-                • <b>Cumulative Mortality Load:</b> {rep_total_deaths:,} total deaths recorded within this timeframe.<br>
-                • <b>Timeline Trend Performance:</b> {round(rep_avg_rate, 2)} average deaths per 100k population.<br>
-                • <b>Critical Peak Crisis Year:</b> Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k.
-            </div>
-
-            <h2>2. Statistical Trajectory Narrative</h2>
-            <p>
-                In the opening assessment window of {rep_years[0]}, the localized age-adjusted death rate for {rep_disease} within {rep_state} 
-                was evaluated at <b>{start_rate}</b> per 100k. Upon reaching the terminal reporting closing phase of {rep_years[1]}, 
-                the validated metrics modified to <b>{end_rate}</b> per 100k. 
-            </p>
-            <p>
-                This shifting trend vector mathematically represents <b>{trend_status}</b> of approximately <b>{abs(round(rate_diff, 2))}</b> 
-                deaths per 100k citizens over the course of the customized historical era window.
-            </p>
-
-            <h2>3. Strategic Resource Allocation Advice</h2>
-            <p>
-                The automated public health analytics architecture recommends that medical policy vectors inside {rep_state} 
-                optimize hospital facility metrics and healthcare financial infrastructure in cross-sectional alignment with the 
-                volatility parameters noted around the peak year of {int(rep_peak_row['Year'])}.
-            </p>
-
-            <div class="footer">
-                OFFICIAL REPORT SYSTEM GENERATED • CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA
-            </div>
-        </body>
-        </html>
-        """
-
         st.markdown("""
             <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 0.5rem; border-radius: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
                 <p style="font-size: 0.8rem; color: #94a3b8; font-family: 'DM Sans', sans-serif; margin: 0;">🎯 Data Script Package Compiled. Ready for Secure PDF Extraction:</p>
@@ -1405,20 +1337,102 @@ with tab6:
         
         st.info(f"Report components structured for {rep_state} - {rep_disease} ({rep_years[0]}-{rep_years[1]}). Ready to deploy print engine.")
 
-        # PDF Compilation
-        pdf_buffer = io.BytesIO()
-        HTML(string=html_content).write_pdf(pdf_buffer)
-        pdf_data = pdf_buffer.getvalue()
+        # 4. FPDF Generation Logic (No system dependencies)
+        class CustomPDF(FPDF):
+            def header(self):
+                self.set_fill_color(26, 32, 44) # Dark Header bar like our dashboard
+                self.rect(0, 0, 210, 38, 'F')
+                self.set_font('Helvetica', 'B', 18)
+                self.set_text_color(255, 255, 255)
+                self.set_y(10)
+                self.cell(0, 10, "OFFICIAL PUBLIC HEALTH ANALYTICS REPORT", ln=True, align='C')
+                self.set_font('Helvetica', '', 9)
+                self.set_text_color(160, 174, 192)
+                self.cell(0, 5, "CDC NCHS MORTALITY INSIGHTS SYSTEM • AUTOMATED INTEL SUMMARY", ln=True, align='C')
+                self.ln(15)
+
+            def footer(self):
+                self.set_y(-15)
+                self.set_font('Helvetica', 'I', 8)
+                self.set_text_color(113, 128, 150)
+                self.cell(0, 10, "OFFICIAL REPORT SYSTEM GENERATED • CONFIDENTIAL PUBLIC HEALTH EDA PROJECT DATA", align='C')
+
+        # Create PDF object
+        pdf = CustomPDF(orientation='P', unit='mm', format='A4')
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # Meta Grid Block
+        pdf.set_fill_color(247, 250, 252)
+        pdf.rect(15, 45, 180, 22, 'F')
+        pdf.set_text_color(45, 55, 72)
+        
+        pdf.set_y(47)
+        pdf.set_x(18)
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(90, 5, f"Target Disease: {rep_disease}")
+        pdf.cell(90, 5, f"Geographic Scope: {rep_state}", ln=True)
+        
+        pdf.set_x(18)
+        pdf.cell(90, 5, f"Timeline Window: {rep_years[0]} - {rep_years[1]}")
+        pdf.cell(90, 5, "Compiled Date: 2026", ln=True)
+        
+        # Section 1
+        pdf.ln(12)
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.set_text_color(26, 32, 44)
+        pdf.cell(0, 7, "1. Clinical Baseline Calculations", ln=True)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(3)
+        
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(45, 55, 72)
+        pdf.multi_cell(0, 6, f"- Cumulative Mortality Load: {rep_total_deaths:,} total deaths recorded within this timeframe.\n"
+                             f"- Timeline Trend Performance: {round(rep_avg_rate, 2)} average deaths per 100k population.\n"
+                             f"- Critical Peak Crisis Year: Year {int(rep_peak_row['Year'])} reached a peak of {rep_peak_row[rate_col]} deaths per 100k.")
+        
+        # Section 2
+        pdf.ln(8)
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.set_text_color(26, 32, 44)
+        pdf.cell(0, 7, "2. Statistical Trajectory Narrative", ln=True)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(3)
+        
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(45, 55, 72)
+        paragraph1 = f"In the opening assessment window of {rep_years[0]}, the localized age-adjusted death rate for {rep_disease} within {rep_state} was evaluated at {start_rate} per 100k. Upon reaching the terminal reporting closing phase of {rep_years[1]}, the validated metrics modified to {end_rate} per 100k."
+        paragraph2 = f"This shifting trend vector mathematically represents {trend_status} of approximately {abs(round(rate_diff, 2))} deaths per 100k citizens over the course of the customized historical era window."
+        
+        pdf.multi_cell(0, 6, paragraph1)
+        pdf.ln(3)
+        pdf.multi_cell(0, 6, paragraph2)
+        
+        # Section 3
+        pdf.ln(8)
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.set_text_color(26, 32, 44)
+        pdf.cell(0, 7, "3. Strategic Resource Allocation Advice", ln=True)
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(3)
+        
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(45, 55, 72)
+        advice_text = f"The automated public health analytics architecture recommends that medical policy vectors inside {rep_state} optimize hospital facility metrics and healthcare financial infrastructure in cross-sectional alignment with the volatility parameters noted around the peak year of {int(rep_peak_row['Year'])}."
+        pdf.multi_cell(0, 6, advice_text)
+
+        # Output to Streamlit download button via in-memory bytes
+        pdf_output = pdf.output()
+        pdf_bytes = bytes(pdf_output) if isinstance(pdf_output, bytearray) else pdf_output
 
         st.download_button(
             label=f"📥 Download Official PDF Report",
-            data=pdf_data,
+            data=pdf_bytes,
             file_name=f"Official_Report_{rep_state}_{rep_disease.replace(' ', '_')}.pdf",
             mime="application/pdf"
         )
     else:
         st.warning("No records found matching these metrics. Modify sliders to reload configuration fields.")
-
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="dashboard-footer">
